@@ -133,7 +133,157 @@
     Jedna z hlavních části algoritmu, fitness funkce ohodnocuje jednotlivé jedince, pro každého z nich určuje jeho váhu, váha v našem případě reprezentuje hodnotu toho, jak
     moc se daný genom blíží optimu. Implementace této funkce je důležitá, protože nám zajišťuje správný výstup celého algoritmu.
 
-    
+    \subsection{Adaptační mechanizmy}
+
+    \subsubsection{Elitism (Elitářství)}
+
+    Elitářství zachovává vždy množinu nejlepších jedinců z předchozí generace do další. Takto vybrané jedince nemutujeme ani nekřížíme, díky tomu si zachováme nejlepší prvky do další
+    generace. Toto bylo důležité implementovat, neboť algoritmus si neumí jinak udržet nejlepší přechozí výsledek se 100\% pravděpodobností, to poté vede, že se může optimální řešení
+    zapomenout mezi generacemi.
+
+    \subsubsection{Mass extinction (Hromadné vymírání)}
+
+    Hromadné vymírání je opět inspirováno přírodou. Hromadné vymírání vezme pár nejsilnějších jedinců a pokud jsou splněné podmínky pro spuštění vymírání, těchto pár jedinců
+    postupně mutujeme, aby vytvořili novou populaci. Toto má předejít problémům s uvíznutím v lokálním maximu, abych předešli ztrátě výsledku, minimálně jednoho nejlepšího z předešlé
+    populace necháme nezměněného do další generace. Hromadné vymírání mi dále pomohlo v řešení problémů s uváznutím v lokálním maximu.
+
+    \pagebreak
+
+    \section{Měření a zkoumání výsledků}
+
+    \subsection{Testovací prostředí}
+
+    Testování probíhá na zařízení s procesorem od firmy Intel, označení Intel i5 (I5-5257U) s výkonem 2.7 GHz, 2 jádra a 4 vlákna. Operační pamět je 8GB a počítač využívá
+    operační systém MacOs Catalina verze 0.15.2 (19C57). Program je napsán v jazyce c++ standard 17, program je kompilován s přepínačem -O3 pro maximální optimalizaci a to za pomocí
+    kompilátoru clang.
+
+    \subsection{Data}
+
+    Vzorek dat, která používám k měření, jsou k nalezení na \href{https://moodle-vyuka.cvut.cz/pluginfile.php/168161/mod_assign/intro/wuf-A.zip}{této adrese}. Jednotlivé instance
+    použíté v daném grafu budou popsány.
+
+    \subsection{Závislost odchylky od výsledku na velikosti populace a počtu generací}
+
+    Počet generací a i velikost populace ovlivňuje délku běhu, ovšem více generací nebo větší populace nemusí vyřešit všechny problémy, musíme najít kompromis.
+
+    \begin{figure}[H]
+        \begin{center}
+            \begin{tikzpicture}
+                \begin{axis}[
+                    ybar,
+                    enlargelimits=0.15,
+                    legend style={at={(0.5,-0.4)},
+                      anchor=north,legend columns=-1},
+                    ylabel={Průměrná odchylka},
+                    symbolic x coords={50 evolucí, 100 evolucí, 500 evolucí},
+                    x tick label style={rotate=45,anchor=east},
+                    nodes near coords,
+                    nodes near coords align={vertical},
+                    ]
+                \addplot coordinates {(50 evolucí,11.5733333333333) (100 evolucí,7.626666666666650) (500 evolucí,5.360000000000000)};
+                \addplot coordinates {(50 evolucí,8.266666666666650) (100 evolucí,6.23999999999999) (500 evolucí,4.080000000000000)};
+                \addplot coordinates {(50 evolucí,6.92) (100 evolucí,4.959999999999990) (500 evolucí,2.480000000000000)};
+                \legend{Populace 10, Populace 100, Populace 500}
+                \end{axis}
+            \end{tikzpicture}
+            \caption{Graf odchylky v závyslosti na velikosti populace a počtu generací}
+        \end{center}
+    \end{figure}
+
+    \begin{figure}[H]
+        \begin{center}
+            \begin{tikzpicture}
+                \begin{semilogyaxis}[
+                    ybar,
+                    enlargelimits=0.15,
+                    legend style={at={(0.5,-0.4)},
+                      anchor=north,legend columns=-1},
+                    ylabel={Průměrný čas},
+                    symbolic x coords={50 evolucí, 100 evolucí, 500 evolucí},
+                    x tick label style={rotate=45,anchor=east},
+                    nodes near coords,
+                    nodes near coords align={vertical},
+                    ]
+                \addplot coordinates {(50 evolucí,0.046402211270000) (100 evolucí,0.078718636110000) (500 evolucí,0.428356433550000)};
+                \addplot coordinates {(50 evolucí,0.380980928010000) (100 evolucí,0.835170514090000) (500 evolucí,3.099806121000000)};
+                \addplot coordinates {(50 evolucí,1.843979478740001) (100 evolucí,3.962392227660002) (500 evolucí,18.854921533069991)};
+                \legend{Populace 10, Populace 100, Populace 500}
+                \end{semilogyaxis}
+            \end{tikzpicture}
+            \caption{Graf závislosti času na velikosti populace a počtu generací}
+        \end{center}
+    \end{figure}
+
+    Jako nejlepší poměr mezi rychlostí a přesností je možnost použít 100 evolucí na populaci o velikosti 100 jedinců. Jako druhá nejlepší možnost se ještě jeví
+    použítí populace o velikosti 500, ovšem tato možnost je na počet operací náročnější a nepřináší velké zlepšení.
+
+    \subsubsection{Porovnání vývoje ceny podle počtu generací}
+
+    V tomto případě sleduju chování programu na jedné instanci, pokaždé ale s jiným počtem generacím, zde je vývoj cen.
+
+    \begin{figure}[H]
+        \begin{center}
+            \begin{tikzpicture}
+                \begin{semilogxaxis}[
+                    ylabel={Hodnota vah},
+                    xlabel={Generace},
+                    legend style={at={(0.5,-0.1)},
+                    anchor=north,legend columns=-1}
+                ]
+                    \addplot table[x index = {0}, y index = {4}] {data/wuf20-014-50-gen.dat};
+                    \addplot table[x index = {0}, y index = {4}] {data/wuf20-014-100-gen.dat};
+                    \addplot table[x index = {0}, y index = {4}] {data/wuf20-014-500-gen.dat};
+                    \addplot[gray, thin, mark=none] coordinates {(0.1,75) (550,75)};
+                    \legend{50 generací, 100 generací, 500 generací, Optimum}
+                \end{semilogxaxis}
+            \end{tikzpicture}
+            \caption{Graf vývoje hodnoty fitness funkce bez využítí elitářství}
+        \end{center}
+    \end{figure}
+
+    Testovací
+
+    \begin{figure}[H]
+        \begin{center}
+            \begin{tikzpicture}
+                \begin{semilogyaxis}[
+                    ylabel={Hodnota fitness funkce},
+                    xlabel={Generace},
+                    legend style={at={(0.5,-0.1)},
+                    anchor=north,legend columns=-1}
+                ]
+                    \addplot table {data/wuf20-590-A-no-elitism.dat};
+                    \addplot table[x index = {0}, y index = {3}] {data/wuf20-590-A-no-elitism.dat};
+                    \addplot[gray, thin, mark=none] coordinates {(0,0.513888888888889) (100,0.513888888888889)};
+                    \legend{Maximum, Medián, Optimum}
+                \end{semilogyaxis}
+            \end{tikzpicture}
+            \caption{Graf vývoje hodnoty fitness funkce bez využítí elitářství}
+        \end{center}
+    \end{figure}
+
+    Průběh fitness funkce není v tomto případě vzestupný a algoritmus má problém si udržet nejlepší nalezenou hodnotu. Dokonce i při nalezení optima, může v další generaci tuto informaci
+    ztratit, proto implementuju elitářství, které zajistí, že hodnota bude mít tendenci spíše růst. Zde je graf po aplikaci elitářství.
+
+    \begin{figure}[H]
+        \begin{center}
+            \begin{tikzpicture}
+                \begin{semilogyaxis}[
+                    ylabel={Hodnota fitness funkce},
+                    xlabel={Generace},
+                    legend style={at={(0.5,-0.1)},
+                    anchor=north,legend columns=-1}
+                ]
+                    \addplot table {data/wuf20-590-A-elitism.dat};
+                    \addplot table[x index = {0}, y index = {3}] {data/wuf20-590-A-elitism.dat};
+                    \addplot table[x index = {0}, y index = {2}] {data/wuf20-590-A-elitism.dat};
+                    \addplot[gray, thin, mark=none] coordinates {(0,0.513888888888889) (100,0.513888888888889)};
+                    \legend{Maximum, Medián, Minimum, Optimum}
+                \end{semilogyaxis}
+            \end{tikzpicture}
+            \caption{Graf vývoje hodnoty fitness funkce s využítím elitářství}
+        \end{center}
+    \end{figure}
 
     % Problém batohu (v angličtině Knapsack Problem) je jeden z NP-těžkých problémů. Jeho základem je:
     % \begin{itemize}

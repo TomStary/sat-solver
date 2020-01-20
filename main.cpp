@@ -160,15 +160,17 @@ std::vector<bool> Specimen::GetGenom()
 class SATSolver {
 public:
     SATSolver(std::vector<int> weights, std::vector<std::vector<int>> clauses);
-    void Solve();
+    int Solve(bool print = true);
 private:
     int variablesCount;
     int clausesCount;
     int pop_size = 100;
+    int generation = 100;
     std::shared_ptr<SAT> satProblem;
     std::vector<Specimen> population = std::vector<Specimen>();
     void Crossbreeding();
-    void Mutation();
+    void Mutation(int probability = 50);
+    void MassExtenction();
 };
 
 SATSolver::SATSolver(std::vector<int> weights, std::vector<std::vector<int>> clauses)
@@ -181,27 +183,38 @@ SATSolver::SATSolver(std::vector<int> weights, std::vector<std::vector<int>> cla
     }
 }
 
-void SATSolver::Solve()
+int SATSolver::Solve(bool print)
 {
-    for (int i = 0; i < 100; i++) {
+    std::cout << std::fixed << std::setprecision(15);
+    for (int i = 0; i < generation; i++) {
         for (auto& specimen: population) {
             specimen.Fitness();
         }
         std::sort(population.begin(), population.end(), [](const Specimen& a, const Specimen& b) {
             return a.fitness > b.fitness;
         });
-        std::cout << population[0].fitness << " " << satProblem->CalculateClausesWeight(population[0].GetGenom()) << std::endl;
-        auto genom = population[0].GetGenom();
-        for (int e = 0; e < genom.size(); e++) {
-            std::cout << (genom[e] ? "1" : "-1") << " ";
+        MassExtenction(); //check mass extenction, then execute it
+        //max - min - med - weight
+        if (print) {
+            std::cout << i << " " << population[0].fitness << " " << population[pop_size-1].fitness << " " << ((population[(pop_size/2)-1].fitness + population[pop_size/2].fitness)/2.0)
+                << " " << satProblem->CalculateClausesWeight(population[0].GetGenom()) << std::endl;
         }
-        std::cout << std::endl;
         Crossbreeding();
         Mutation();
     }
     for (auto& specimen: population) {
         specimen.Fitness();
     }
+    std::sort(population.begin(), population.end(), [](const Specimen& a, const Specimen& b) {
+        return a.fitness > b.fitness;
+    });
+    //max - min - med - weight
+    if (print) {
+        std::cout << pop_size << " " << population[0].fitness << " " << population[pop_size-1].fitness << " " << ((population[(pop_size/2)-1].fitness + population[pop_size/2].fitness)/2.0)
+                << " " << satProblem->CalculateClausesWeight(population[0].GetGenom()) << std::endl;
+    }
+
+    return satProblem->CalculateClausesWeight(population[0].GetGenom()); //return best weight
 }
 
 void SATSolver::Crossbreeding()
@@ -240,7 +253,7 @@ void SATSolver::Crossbreeding()
     std::sort(tmp.begin(), tmp.end(), [](const Specimen& a, const Specimen& b) {
         return a.fitness > b.fitness;
     });
-    // Elitarism
+    // Elitism
     population = std::vector<Specimen> { theBestOutOfBest };
     population[0] = tmp[0];
     population[1] = tmp[1];
@@ -256,69 +269,97 @@ void SATSolver::Crossbreeding()
     }
 }
 
-void SATSolver::Mutation()
+void SATSolver::Mutation(int probability)
 {
     for (int i = 2; i < pop_size; i++) {
         int sel = (rand()%1000);
-        if (sel > 10) {
+        if (sel > probability) {
             continue;
         }
         population[i].Mutate();
     }
 }
 
-void initiate_algorithm(std::string filename)
+void SATSolver::MassExtenction()
 {
-    std::ifstream file (filename);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("File could not be open.");
-    } else {
-        //now we can read and parse file
-        std::string line;
-        int count_variables, count_clauses;
-        std::vector<int> weights = std::vector<int>();
-        std::vector<std::vector<int>> clauses = std::vector<std::vector<int>>();
-        while (std::getline(file, line)) {
-            std::istringstream iss (line);
-            char firstChar;
-            std::string type;
-            if (line[0] == 'c') {
-                continue;
-            } else if (line[0] == 'p') {
-                iss >> firstChar;
-                iss >> type >> count_variables >> count_clauses;
-            } else if (line[0] == 'w') {
-                iss >> firstChar;
-                for (int i = 0; i < count_variables; i++) { //read all weights
-                    int weight;
-                    iss >> weight;
-                    weights.push_back(weight);
-                }
-            } else if (line[0] == '%') {
-                break;
-            } else {
-                int a, b, c;
-                iss >> a >> b >> c;
-                std::vector<int> clause = { a, b, c };
-                clauses.push_back(clause);
-            }
+    //If median is same as max then fire mass extenction
+    if (((population[(pop_size/2)-1].fitness + population[pop_size/2].fitness)/2.0) == population[0].fitness) {
+        auto survivors = std::vector<Specimen>();
+        for (int i = 0; i < pop_size; i++) { //fill survivors, only select first 10
+            survivors.push_back(population[i%10]);
         }
-
-        auto satSolver = SATSolver(weights, clauses);
-        satSolver.Solve();
+        population = std::vector<Specimen>(survivors);
+        for (int i = 0; i < 100; i++) {
+            Mutation(); //violent mutation
+        }
     }
+}
+
+void initiate_algorithm(std::string filename, int calculatedResult)
+{
+    //std::chrono::duration<double> sum_time = std::chrono::duration<double>(0);
+    //for (int e = 0; e < 100; e++) {
+        std::ifstream file (filename);
+
+        if (!file.is_open()) {
+            throw std::runtime_error("File could not be open.");
+        } else {
+                //now we can read and parse file
+            std::string line;
+            int count_variables, count_clauses;
+            std::vector<int> weights = std::vector<int>();
+            std::vector<std::vector<int>> clauses = std::vector<std::vector<int>>();
+            while (std::getline(file, line)) {
+                std::istringstream iss (line);
+                char firstChar;
+                std::string type;
+                if (line[0] == 'c') {
+                    continue;
+                } else if (line[0] == 'p') {
+                    iss >> firstChar;
+                    iss >> type >> count_variables >> count_clauses;
+                } else if (line[0] == 'w') {
+                    iss >> firstChar;
+                    for (int i = 0; i < count_variables; i++) { //read all weights∂
+                        int weight;
+                        iss >> weight;
+                        weights.push_back(weight);
+                    }
+                } else if (line[0] == '%') {
+                    break;
+                } else {
+                    int a, b, c;
+                    iss >> a >> b >> c;
+                    std::vector<int> clause = { a, b, c };
+                    clauses.push_back(clause);
+                }
+            }
+
+            auto satSolver = SATSolver(weights, clauses);
+           // auto start = std::chrono::steady_clock::now();
+            if (calculatedResult == 0) {
+                satSolver.Solve();
+            } else {
+                auto result = satSolver.Solve(false);
+                std::cout << (double)(std::abs((double)(calculatedResult-result)/(double)calculatedResult)*100) << std::endl;
+            }
+            //auto end = std::chrono::steady_clock::now();
+            //sum_time += (end-start);
+        }
+    //}
+    //std::cout << "time " << (double)(sum_time.count()/100.0) << std::endl;
 }
 
 int main(int argc, char ** argv)
 {
     std::srand(std::time(0));
-    if (argc != 2) {
+    if (argc != 3) {
         std::cerr << "You have to provide a file to analyze." << std::endl;
         return 1;
     }
 
     std::string filename = argv[1];
-    initiate_algorithm(filename);
+    int result = std::stoi(argv[2]);
+    initiate_algorithm(filename, result);
     return 0;
 }
