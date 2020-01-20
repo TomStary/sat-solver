@@ -1,0 +1,479 @@
+% arara: pdflatex
+% arara: pdflatex
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[czech]{babel}
+\usepackage{amssymb}
+\usepackage{pgfplots}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{todonotes}
+
+
+\title{Řešení problému vážené splnitelnosti booleovské formule pokročilou iterativní metodou}
+\author{Tomáš Starý (staryto5)}
+
+\begin{document}
+    \maketitle
+    \tableofcontents
+    \pagebreak
+
+    \section{Zadání úlohy}
+
+    Podrobné zadání úlohy je na \href{https://moodle-vyuka.cvut.cz/mod/assign/view.php?id=48355}{této adrese}. Jedná se o řešení 3SAT problému pomocí některé z pokročlých heuristik:
+
+    \begin{itemize}
+        \item {simulované ochlazování}
+        \item {genetický algoritmus}
+        \item {tabu prohledávání}
+    \end{itemize}
+
+    Po nasazení heuristiky je potřeba ověřit její vhodnost a to pomocí experimentálního vyhodnocení.
+
+    \subsection{Popis řešeného problému}
+
+    Dána booleovská formule $F$ o $n$ proměnných, $X = (x_1, x_2,\dots,x_n)$ v konjunktivní normální formě (CNF).
+    Dále jsou dány celočíselné kladné váhy těchto $n$ proměnných $W = (w_1, w_2,\dots, w_n)$. Nalezněte přiřazení $Y=(y_1, y_2,\dots, y_n)$
+    proměnných $x_1, x_2,\dots, x_n$, takové, že $F(Y) = 1$ a součet $S$ vah proměnných nastavených do 1 je maximální.
+
+    Omezte se na vážený 3-SAT problém, kde každá klauzule má právě 3 proměnné. Složitost problému je stejná, implementace a klasifikace instancí jsou jednodušší.
+
+    \section{Zpracování a implementace řešení}
+
+    Jako nejdříve sem začal parserem na zpracování souboru, u kterého sem kontroloval hodnoty, které ze souboru získal. Následovalo načtení dat do konečné struktury.
+
+    Posléze jsem implementoval základní genetický algoritmus s křížením, mutací a výběrem jedinců do další generace pomocí turnajového výběru. Na menších instancích sem
+    zkoušel chování programu a upravoval jednotlivé části, abych dosáhl optimálního výsledku.
+
+    \todo{Dokončit}
+
+    \subsection{Struktura programu}
+
+    Program je psaný v jazyce C++, kompilován s maximální optimalizací (přepínač -O3) pomocí clang kompilátoru. Pro reprezentaci klauzulí a celého SAT problému byly
+    použity třídy (Clause, SAT). Parser je poté samostatná funkce, které sestavuje třídu SATSolver, která vytváří ostatní objekty. Pro účely genetického algoritmu
+    jsem implementoval ještě třídu Specimen, která reprezentuje jednotlivé členy v populaci.
+
+    SATSolver je třída, která má na starosti vše okolo inicializace a řešení SAT problému. Nese v sobě informace o populaci, instanci SAT problému, velikosti populace,
+    počtu klauzulí a počtu proměnných. Implementuje tyto metody:
+
+    \begin{itemize}
+        \item {SATSolver: Konstruktor třídy, jako vstupní data má pole vah jednotlivých proměnných a pole jednotlivých klauzulí. Na základě těchto dat vytvoří potřebnou
+                datovou strukturu. Také vytáří základní populaci.}
+        \item {Solve: Tato metoda slouží k spuštění a provedení samotné evoluce, která je vlastním řešením problému.}
+        \item {Crossbreeding: Privátní metoda, má na starost samotné křížení mezi jednotlivými členy populace}
+        \item {Mutation: Také privítní metoda, řeši mutaci jednotlivých členů populace.}
+    \end{itemize}
+
+    Třída SAT obsahuje všechny důležité informace o SAT problému. Nese informace o váhách proměnných a klauzulích, které dostane při zakládaní od SATSolver. Jednotlivé instance
+    třídy Clause si ovšem třída zakládá sama z dat, které jsou jí předány v konstruktoru. Obsahuje tyto metody:
+
+    \begin{itemize}
+        \item {SAT: Kontruktor třídy, na základě dat, které jsou poslány v parametru, vytváří instance třídy Clause.}
+        \item {CalculateWeight: Vrací váhu všech proměnných jako jejich součet.}
+        \item {CalculateFulfilled: na základě genomu, který získá jako vstupní parametr vypočítá součet všech splněných klauzulí.}
+        \item {CalculateClausesWeight: Vrací váhu použitých proměnných podle genomu, který je předán jako vstupní parametr.}
+        \item {ClausesSize: Vrací počet klauzulí.}
+    \end{itemize}
+
+    Třída Clause je již reprezentací jednotlivých klauzulí, nese pouze informaci o proměnných, které jsou použitý v dané klauzuli. Implentuje tyto metody:
+
+    \begin{itemize}
+        \item {Clause: Konstruktor třídy, inicializuje data.}
+        \item {Fulfilled: Vrací bool s informací o splnění klauzule na základě genomu ze vstupních dat.}
+        \item {ClauseWeight: Vrací váhu dané klauzule.}
+    \end{itemize}
+
+    Jako poslední je třída Specimen, která je reprezentací jedince v populaci genetického algoritmu. Uchovává v sobě informace o genomu daného jedince,
+    genom v tomto případě je pole boolů, které reprezentují použití jednotlivých proměnných v řešení SAT problému, také si nese informaci o hodnotě své fitness funkce.
+    Instance má take shared\_ptr na instanci SATu. Implementuje tyto metody:
+
+    \begin{itemize}
+        \item {Specimen: Konstruktor třídy, inicializuje náhodně genom., díky tomu je zajistěna prvotní diverzita. Také obsahuje copy konstruktor, který vytvoří hlubokou kopii.}
+        \item {Crossbreed: Metoda, která slouží ke skřížení 2 jedinců. Na vstupu je jedinec, který předá část svého genomu a také pozice, od které je genom předán.}
+        \item {GetGenom: Metoda pro získání genomu, neboť genom je jako privátní parametr.}
+        \item {Mutate: Metoda, která s velmi nízkou pravděpodobností zmutuje genom daného jedince.}
+        \item {Fitness: Slouží k výpočtu hodnoty fitness funkce, které posleze uloží do veřejného parametru.}
+    \end{itemize}
+
+    \subsection{Genetický algoritmus}
+
+    V popisu implementace jsem již popsal některé prvky genetického algoritmu. Nyná si projděme všechny na jednom místě.
+
+    Algoritmus napodobuje evoluci, kterou známe z reálného světa. Genom reprezentuje informaci o každém individuu, každé individuum poté prochází
+    evolucí, které mění jeho genom. Algoritmus řídí výběr individuí do další generace podle toho, jak blízko se blíží správnému řešení a to díky
+    hodnotě fitness funkce. Při každém evolučném kroku ovšem musíme nějdříve provést selekci nad původní populací, nad tímto výběrem poté provedeme
+    operaci křížení a také mutaci.
+
+    \subsubsection{Tournament selection (Turnajový výběr)}
+
+    Jedná se o jednu z metod pro výběr individuí z populace. Podmnožina o určité velikosti $n$ je vybrána náhodně, tuto množinu následně seřadíme podle hodnoty
+    fitness funkce. Takto seřazená funkce ještě není náš finální výběr, jednotlivé členy zařadíme do další populace s následující pravděpodobností:
+    \begin{itemize}
+        \item {1. prvek s pravděpodobností $p$}
+        \item {2. prvek s pravděpodobností $p*(1-p)$}
+        \item {3. prvek s pravděpodobností $p*(1-p)^2$}
+        \item {n. prvek s pravděpodobností $p*(1-p)^{n-1}$}
+    \end{itemize}
+
+    Takto opakujeme jednotlivé turnaje dokud nenaplníme novou populaci.
+
+    \subsubsection{Crossbreeding (Křížení)}
+
+    Křížení je forma sdílení genomu mezi individui. Pracuje na pricipu přenesení části genomu z jedince A do genomu jedince B a naopak. Křížení je také podmíněno pravděpodobností.
+    V mé implementaci probíhá křížení mezi sousedními jedinci, v rámci určitých optimalizací je ovšem doporučeno zajistit výběr jedinců jiným způsobem, například vybírat jedince, kteří
+    mají větší rozdíl v hodnotách fitness funkce. Křížení probíhá pouze jednobodové.
+
+    \subsubsection{Mutation (Mutace)}
+
+    Mutace je změna genomu u jednoho jedince, mutace by se děje s určitou pravděpodobností $p$, tato hodnota by ovšem měla být malá, neboť zpomaluje a zhrošuje výstup algoritmu.
+
+    \subsubsection{Fitness funkce}
+
+    Jedna z hlavních části algoritmu, fitness funkce ohodnocuje jednotlivé jedince, pro každého z nich určuje jeho váhu, váha v našem případě reprezentuje hodnotu toho, jak
+    moc se daný genom blíží optimu. Implementace této funkce je důležitá, protože nám zajišťuje správný výstup celého algoritmu.
+
+    
+
+    % Problém batohu (v angličtině Knapsack Problem) je jeden z NP-těžkých problémů. Jeho základem je:
+    % \begin{itemize}
+    %     \item $n \in \mathbb{N}$ určující počet věcí, které chceme vložit do batohu
+    %     \item $M \in \mathbb{N}$ označující kapacitu batohu
+    %     \item dále mějme množinu $V = \{v_1, v_2, \dots, v_n\}$ vah věcí
+    %     \item a množinu $C = \{c_1, c_2, \dots, c_n\}$ cen věcí
+    % \end{itemize}
+
+    % V rámci tohoto úkolu budeme řešit pouze konstruktivní problém, hledáme tedy kombinaci takových předmětů z bathou, které se vejdou do batohu a budou
+    % mít zároveň nejvyšší možnou cenu.
+
+    % \section{Implementace}
+
+    % Jako pokročilou metodu jsem zvolil genetický algoritmus. Genetický algoritmus je založen na reálné evoluci, puze velmi zjednodušené. Na začátku
+    % algoritmu náhodně vygerenuje populaci, kde každý jedinec má unikátní genom, který je v našem případě definován jako pole boolů, kde se nachazí
+    % hodnota pro každý predmět, který může být vložen do batohu. Tímto si sestavíme první generaci, u ní vypočítáme fitness hodnotu pro vsechny genomy v
+    % populaci. Fitness funkce nám říká silu určitého genomu, tedy to, jak dobře se blíží výsledku. Díky tomuto může poté začít křížit jednotlivé
+    % genomy v populaci, toto se děje s určitou pravděpodobností, dále jestě jednotlivé geny podrobíme náhodné mutaci, tato mutace je ovšem velmi
+    % málo pravděpodobná narozdíl od křížení. Tímto způsoben necháme algoritmus projít přes několik generací, kde v každé generaci provedeme křížení,
+    % mutaci a také zavedeme prvek elitarismu, kdy z naší populace zachováme 2 nejlepší do další generace.
+
+    % \subsection{Fitness funkce}
+
+    % Fitness funkce má největší dopad na, jak dobré výsledky budeme dostávat z našeho generačního algoritmu. Jako fitness funkci sem zvolil vztah, který je založen
+    % na již předpočítaném výsledku. Funkce vychází z tohoto zdroje: http://math.stmarys-ca.edu/wp-content/uploads/2017/07/Christopher-Queen.pdf.
+
+    % \subsection{Výběr individuí}
+
+    % Pro výběr individuí do další generace používám turnajový výběr. Ten funguje tak, že na začátku vybere skupinu z populace, seřadí skupiny od nejlepšího po nejhorší a poté je se snižující
+    % se pravděpodobností vybere do další generace. Tento výběr probíhá dokud není naplněna celá nová populace.
+
+    % \section{Analýza významu velikosti populace}
+
+    % Nyní se zaměřím na to jak velikost populace ovlivní běh a přesnost algoritmu. Nastavení pravděpodobnosti křížení a mutace necháme nastaveno na 95\% a 0.01\%.
+    % Počet generací je v rámci tohoto testovaní nastaven na 100. Nejdříve se podíváme na řešení pro 30 instancí.
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop500.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop500.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop500.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 500 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop200.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop200.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop200.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 200 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop1000.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop1000.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop1000.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 1000 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop50.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop50.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop50.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 50 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % Z grafů je patrné, že čím větší populaci máme, tím větší diverzita v populaci je. Jak je ovšem vidět, všechny populace se dostaly
+    % ke správnému výsledku.
+
+    % Teď se podíváme jak se věci změní pokud zvýšíme počet instancí na 40.
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop50_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop50_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop50_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 50 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop200_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop200_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop200_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 200 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop500_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 500 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/pop1000_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 1000 individuí}
+    %     \end{center}
+    % \end{figure}
+
+    % Jak je vidět pro vyšší počet instancí už trvá déle se dostat ke správnému výsledku a našich 100 generací pro to tedy nestačí.
+
+    % \section{Význam počtu evolucí}
+
+    % Z posledních grafů je vidět, že naše generace se postupně přibližovaly výsledku. Zkusme se nyní zaměřit na to jestli počet generací bude ovlivňovat to,
+    % jak moc se výsledku přiblížíme. Populaci zkusíme nechat na 500 a poté ještě zkusíme rozdíl mezi 500 a 1000 individuí.
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo100_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo100_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo100_pop500_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 500 individuí, počet evolucí je 100}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo250_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo250_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo250_pop500_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 500 individuí, počet evolucí je 250}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo500_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo500_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo500_pop500_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 500 individuí, počet evolucí je 500}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo1000_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo1000_pop500_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo1000_pop500_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 500 individuí, počet evolucí je 1000}
+    %     \end{center}
+    % \end{figure}
+
+    % Pro populaci o velikosti 500 to vypadá, že se dostáváme do nějakého lokálního maxima, zkusíme zvýšit počet individuí, pokud stále uvázneme v určitém
+    % maximu musí zvýšit tlak na evoluci.
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo100_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo100_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo100_pop1000_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 1000 individuí, počet evolucí je 100}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo250_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo250_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo250_pop1000_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 1000 individuí, počet evolucí je 250}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo500_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo500_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo500_pop1000_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 1000 individuí, počet evolucí je 500}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/evo1000_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/evo1000_pop1000_40.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/evo1000_pop1000_40.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost populace je 1000 individuí, počet evolucí je 1000}
+    %     \end{center}
+    % \end{figure}
+
+    % Je vidět, že algoritmus má problém se změnit a uvázne v lokálním maximu, ze kterého je težké se dostat, proto se zaměřme na selekční tlak.
+
+    % \section{Turnajová metoda výběru}
+
+    % Podívejme se na to jak výběr našich individuí ovlivní evoluci naší populace. Nyní jsme do turnaje brali polovinu populace. Zkusme tedy měnit velikost
+    % turnaje, jak se toto projeví na výsledcích. Nastavení populace necháme na 1000 a počet generací také, na takto velkých datech nejjednodušeji uvidíme, kdy uvázmene
+    % v lokálním extrému.
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/tour20.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/tour20.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/tour20.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost turnaje je 20}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/tour100.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/tour100.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/tour100.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost turnaje je 100}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/tour250.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/tour250.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/tour250.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost turnaje je 250}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/tour500.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/tour500.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/tour500.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost turnaje je 500}
+    %     \end{center}
+    % \end{figure}
+
+    % \begin{figure}[H]
+    %     \begin{center}
+    %         \begin{tikzpicture}
+    %             \begin{axis}
+    %                 \addplot table[ignore chars={(,)},col sep=comma] {data/tour750.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {2}] {data/tour750.dat};
+    %                 \addplot table[ignore chars={(,)},col sep=comma, x index = {0}, y index = {3}] {data/tour750.dat};
+    %             \end{axis}
+    %         \end{tikzpicture}
+    %         \caption{Velikost turnaje je 750}
+    %     \end{center}
+    % \end{figure}
+
+    % Jak je vidět, nejoptimálnější byla velikost turnaje 100.
+
+    % \section{Závěr}
+
+    % Nejdříve jak je náš algoritmus přesný, v grafech jsme viděli, jak se jednotlivé generace blíží k hodnocení fitness funkce rovno jedné. Pokud se generace rovná jedné,
+    % jedná se o správný výsledek. Také je důležité sledovat medián, který nám udává, jak je na tom vyšší polovina naší populace a jeho hodnota čím větší, tím lepší. Co se týče
+    % měření času, zde je statistika pro 500 ruzných řešení batohu pro 40 instancí, populace i počet evolucí je shodný a roven 1000, velikost turnaje 20, tyto data ukazují nejdelší běh.
+    % Čas byl měřen na 2,7 GHz Dual-Core Intel Core i5 (I5-5257U), průměrný čas pro 500 problémů je 2.2456 sekund a průměrná odchylka od řešení je 0.005332996117239.
+    % Odchylka bude se zmenšovat se snižujícím se počtem instancí díky větší pravděpodobnosti trefy do správného řešení.
+\end{document}

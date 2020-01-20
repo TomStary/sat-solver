@@ -25,9 +25,9 @@ bool Clause::Fulfilled(std::vector<bool> genom)
     bool res = false;
     for (auto& var: variables) {
         if (var < 0) {
-            res = res || !genom[std::abs(var)];
+            res = res || !genom[std::abs(var)-1];
         } else {
-            res = res || genom[var];
+            res = res || genom[var-1];
         }
     }
     return res;
@@ -37,8 +37,8 @@ int Clause::ClauseWeight(std::vector<bool> genom, std::vector<int> weights)
 {
     int res = 0;
     for (auto& var: variables) {
-        if (genom[std::abs(var)]) {
-            res += weights[std::abs(var)];
+        if (genom[std::abs(var)-1]) {
+            res += weights[std::abs(var)-1];
         }
     }
     return res;
@@ -92,8 +92,10 @@ double SAT::CalculateFulfilled(std::vector<bool> genom)
 double SAT::CalculateClausesWeight(std::vector<bool> genom)
 {
     double res = 0;
-    for (auto& clause: clauses) {
-        res += clause.ClauseWeight(genom, weights);
+    for (int i = 0; i < weights.size(); i++) {
+        if (genom[i]) {
+            res += weights[i];
+        }
     }
     return res;
 }
@@ -139,8 +141,7 @@ void Specimen::Mutate()
 
 void Specimen::Fitness()
 {
-    fitness = std::pow((sat->CalculateClausesWeight(genom)/sat->CalculateWeight()), (sat->ClausesSize() + 1 - sat->CalculateFulfilled(genom)));
-    fitness = std::pow((sat->CalculateClausesWeight(genom)/sat->CalculateWeight()), (sat->ClausesSize() - sat->CalculateFulfilled(genom)));
+    fitness = std::pow((sat->CalculateClausesWeight(genom)/(sat->CalculateWeight()*1.5)), (sat->ClausesSize() + 1 - sat->CalculateFulfilled(genom)));
 }
 
 void Specimen::Crossbreed(Specimen specimen, int position)
@@ -187,7 +188,7 @@ void SATSolver::Solve()
             specimen.Fitness();
         }
         std::sort(population.begin(), population.end(), [](const Specimen& a, const Specimen& b) {
-            return a.fitness < b.fitness;
+            return a.fitness > b.fitness;
         });
         std::cout << population[0].fitness << " " << satProblem->CalculateClausesWeight(population[0].GetGenom()) << std::endl;
         auto genom = population[0].GetGenom();
@@ -213,7 +214,7 @@ void SATSolver::Crossbreeding()
             braveWarriors.push_back(population[poorBoi]);
         }
         std::sort(braveWarriors.begin(), braveWarriors.end(), [](const Specimen& a, const Specimen& b) {
-            return a.fitness < b.fitness;
+            return a.fitness > b.fitness;
         });
 
         double prob = 0.65; //percentual probability for selecting the best one
@@ -237,17 +238,17 @@ void SATSolver::Crossbreeding()
 
     std::vector<Specimen> tmp = std::vector<Specimen>{ population };
     std::sort(tmp.begin(), tmp.end(), [](const Specimen& a, const Specimen& b) {
-        return a.fitness < b.fitness;
+        return a.fitness > b.fitness;
     });
     // Elitarism
-   /*  population = std::vector<Specimen> { theBestOutOfBest };
+    population = std::vector<Specimen> { theBestOutOfBest };
     population[0] = tmp[0];
-    population[1] = tmp[1]; */
+    population[1] = tmp[1];
 
-    for (int i = 0; i < pop_size; i = i+2) {
+    for (int i = 2; i < pop_size; i = i+2) {
         int cut = (rand() % variablesCount);
         int probability = rand() % 100;
-        if (probability <= 65) {
+        if (probability <= 95) {
             auto tmp = Specimen(population[i]);
             population[i].Crossbreed(population[i+1], cut);
             population[i+1].Crossbreed(tmp, cut);
@@ -257,7 +258,7 @@ void SATSolver::Crossbreeding()
 
 void SATSolver::Mutation()
 {
-    for (int i = 0; i < pop_size; i++) {
+    for (int i = 2; i < pop_size; i++) {
         int sel = (rand()%1000);
         if (sel > 10) {
             continue;
