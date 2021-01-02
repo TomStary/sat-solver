@@ -1,0 +1,3 @@
+/Users/tomasstary/School/NI/PAA/sat_generation/CMakeFiles/rebuild_cache.dir
+/Users/tomasstary/School/NI/PAA/sat_generation/CMakeFiles/edit_cache.dir
+/Users/tomasstary/School/NI/PAA/sat_generation/CMakeFiles/main.dir

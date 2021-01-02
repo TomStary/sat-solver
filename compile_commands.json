@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/Users/tomasstary/School/NI/PAA/sat_generation",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   -Wall -Wextra -O3 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk -std=gnu++17 -o CMakeFiles/main.dir/main.cpp.o -c /Users/tomasstary/School/NI/PAA/sat_generation/main.cpp",
+  "file": "/Users/tomasstary/School/NI/PAA/sat_generation/main.cpp"
+}
+]

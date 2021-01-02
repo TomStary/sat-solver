@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/tomasstary/School/NI/PAA/sat_generation/main.cpp
+iostream
+-
+fstream
+-
+memory
+-
+random
+-
+sstream
+-
+string
+-
+vector
+-
+
