@@ -59,11 +59,11 @@ private:
     int variablesCount;
     int clausesCount;
     int pop_size = 1000;
-    int generation = 100;
+    int generation = 1000;
     std::shared_ptr<SAT> satProblem;
     std::vector<Specimen> population = std::vector<Specimen>();
     void Crossbreeding();
-    void Mutation(int probability = 100);
+    void Mutation(int probability = 30);
     void MassExtenction();
 };
 
@@ -192,7 +192,7 @@ void Specimen::Mutate()
 
 void Specimen::Fitness()
 {
-    if (sat->CalculateFulfilled(genom))
+    if (sat->Fullfiled(genom))
     {
         fitness = sat->CalculateClausesWeight(genom);
     }
@@ -239,7 +239,6 @@ int SATSolver::Solve(bool print)
         std::sort(population.begin(), population.end(), [](const Specimen &a, const Specimen &b) {
             return a.fitness > b.fitness;
         });
-        MassExtenction(); //check mass extenction, then execute it
         //max - min - med - weight
         if (print)
         {
@@ -248,6 +247,10 @@ int SATSolver::Solve(bool print)
         }
         Crossbreeding();
         Mutation();
+        std::sort(population.begin(), population.end(), [](const Specimen &a, const Specimen &b) {
+            return a.fitness > b.fitness;
+        });
+        MassExtenction(); //check mass extenction, then execute it
     }
     for (auto &specimen : population)
     {
@@ -272,7 +275,7 @@ void SATSolver::Crossbreeding()
     while (theBestOutOfBest.size() < pop_size)
     {
         std::vector<Specimen> braveWarriors = std::vector<Specimen>();
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 2; i++)
         {
             int poorBoi = std::rand() % (pop_size);
             braveWarriors.push_back(population[poorBoi]);
@@ -343,6 +346,7 @@ void SATSolver::MassExtenction()
     //If median is same as max then fire mass extenction
     if (((population[(pop_size / 2) - 1].fitness + population[pop_size / 2].fitness) / 2.0) == population[0].fitness)
     {
+        std::cout << "Die" << std::endl;
         auto survivors = std::vector<Specimen>();
         for (int i = 0; i < 10; i++)
         { //fill survivors, only select first 10
@@ -353,10 +357,6 @@ void SATSolver::MassExtenction()
             survivors.push_back(Specimen(satProblem, variablesCount));
         }
         population = std::vector<Specimen>(survivors);
-        for (int i = 0; i < 100; i++)
-        {
-            Mutation(); //violent mutation
-        }
     }
 }
 
@@ -423,7 +423,7 @@ void initiate_algorithm(std::string filename, int calculatedResult)
         else
         {
             auto result = satSolver.Solve(true);
-            std::cout << (double)(std::abs((double)(calculatedResult - result) / (double)calculatedResult) * 100) << std::endl;
+            std::cout << result << ": " << (double)(std::abs((double)(calculatedResult - result) / (double)calculatedResult) * 100) << std::endl;
         }
         //auto end = std::chrono::steady_clock::now();
         //sum_time += (end-start);
